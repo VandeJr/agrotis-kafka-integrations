@@ -33,7 +33,7 @@ server:
 
 scheduler:
   cron:
-    eventos: "*/15 * * * * *"
+    eventos: "0 */10 * * * * "
 
 logging:
   level:

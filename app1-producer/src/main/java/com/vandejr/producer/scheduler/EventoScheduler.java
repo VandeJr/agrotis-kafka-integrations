@@ -18,7 +18,7 @@ public class EventoScheduler {
     this.service = service;
   }
 
-  @Scheduled(cron = "${scheduler.cron.eventos:*/15 * * * * *}")
+  @Scheduled(cron = "${scheduler.cron.eventos:0 */10 * * * * }")
   public void publicarEventos() {
     log.info("[EventoScheduler] Iniciando publicação de eventos ENCERRADOS");
     service.publicarEventosEncerrados();
