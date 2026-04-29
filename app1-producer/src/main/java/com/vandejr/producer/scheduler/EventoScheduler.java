@@ -18,7 +18,7 @@ public class EventoScheduler {
     this.service = service;
   }
 
-  @Scheduled(cron = "${scheduler.cron.eventos:0 */10 * * * *}")
+  @Scheduled(cron = "${scheduler.cron.eventos:*/15 * * * * *}")
   public void publicarEventos() {
     log.info("[EventoScheduler] Iniciando publicação de eventos ENCERRADOS");
     service.publicarEventosEncerrados();
@@ -29,5 +29,4 @@ public class EventoScheduler {
     EventoResponseDTO evento = service.criarEvento("teste de topico do evento");
     log.info("[EventoScheduler] Evento criado id={}", evento.id());
   }
-
 }

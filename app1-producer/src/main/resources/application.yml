@@ -31,6 +31,10 @@ kafka:
 server:
   port: 8080
 
+scheduler:
+  cron:
+    eventos: "*/15 * * * * *"
+
 logging:
   level:
     com.vandejr: DEBUG
