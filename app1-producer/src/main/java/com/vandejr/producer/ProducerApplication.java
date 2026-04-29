@@ -1,4 +1,4 @@
-package com.vandejr.app1_producer;
+package com.vandejr.producer;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
