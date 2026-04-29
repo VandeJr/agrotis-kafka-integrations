@@ -1,0 +1,31 @@
+spring:
+  application.name: app2-consumer
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: app2-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.vandejr.producer.dto,com.vandejr.consumer.dto"
+        spring.json.value.default.type: "com.vandejr.consumer.dto.EventoKafkaPayload"
+
+server:
+  port: 8081
+
+app1:
+  base-url: http://localhost:8080
+
+kafka:
+  topic:
+    eventos: AplicacaoAgrotisTesteEvento
+    dlq: AplicacaoAgrotisTesteEvento.DLQ
+  retry:
+    max-attempts: 3
+
+logging:
+  level:
+    com.vandejr: DEBUG
+    org.springframework.kafka: INFO
