@@ -8,8 +8,9 @@ Desafio técnico Agrotis — Spring Boot + Kafka.
 agrotis-kafka-integrations/
 ├── compose.yml
 ├── README.md
-├── app1-producer/   # Producer + API REST
-└── app2-consumer/   # Consumer + integração com App1
+├── test.sh              # script de testes e2e automatizados
+├── app1-producer/       # Producer + API REST
+└── app2-consumer/       # Consumer + integração com App1
 ```
 
 ## Pré-requisitos
@@ -51,7 +52,7 @@ cd app1-producer
 ./mvnw spring-boot:run
 ```
 
-Porta: `8080`  
+Porta: `8080`
 Swagger UI: `http://localhost:8080/swagger-ui.html`
 
 ### App2 — Consumer
@@ -122,15 +123,84 @@ App2 (Consumer)
 
 ## 6. Armazenamento
 
-Os eventos são persistidos no **PostgreSQL** (container `agr-postgres-local`).  
+Os eventos são persistidos no **PostgreSQL** (container `agr-postgres-local`).
 Banco: `agrotis_eventos` | Usuário: `agrotis` | Senha: `agrotis`
 
-O schema é gerenciado pelo Hibernate (`ddl-auto: update`).  
+O schema é gerenciado pelo Hibernate (`ddl-auto: update`).
 **Limitação:** dados perdidos se o container for removido com `docker compose down -v`.
 
 ---
 
-## 7. Parar o ambiente
+## 7. Testes
+
+### Testes automatizados (E2E)
+
+Com App1, App2, Kafka e Postgres rodando, execute na raiz do repositório:
+
+```bash
+chmod +x test.sh
+./test.sh
+```
+
+A variável `SCHEDULER_WAIT` no topo do script controla quantos segundos o teste aguarda
+o scheduler publicar os eventos. O valor padrão é `20` segundos, adequado para o cron
+configurado em `*/15 * * * * *` (a cada 15 segundos).
+
+Se alterar o cron no `application.yml` do App1, ajuste o `SCHEDULER_WAIT` proporcionalmente:
+
+```bash
+# Exemplo: cron a cada 30 segundos
+SCHEDULER_WAIT=35 ./test.sh
+```
+
+O script cobre os seguintes cenários:
+
+| Teste | O que valida |
+|---|---|
+| POST /eventos | Retorna 201 com situação `ENCERRADO` |
+| POST com descrição vazia | Retorna 400 com mensagem de erro |
+| PATCH com id inexistente | Retorna 404 com mensagem de erro |
+| PATCH /integrar | Retorna 200 e atualiza situação para `INTEGRADO` |
+| Idempotência do scheduler | Evento `INTEGRADO` não é republicado no tópico |
+
+### Teste manual da DLQ
+
+O teste da DLQ não está no script pois requer intervenção manual:
+
+1. Com App1 e App2 rodando, crie um evento:
+```bash
+curl -X POST http://localhost:8080/eventos \
+  -H "Content-Type: application/json" \
+  -d '{"descricao": "teste dlq"}'
+```
+
+2. Derrube o App1 (`Ctrl+C`).
+
+3. Aguarde o scheduler publicar o evento (ou insira diretamente no banco):
+```sql
+INSERT INTO eventos (id, descricao, situacao, criado_em, atualizado_em)
+VALUES (gen_random_uuid(), 'teste dlq manual', 'ENCERRADO', now(), now());
+```
+
+4. Observe no log do App2 as 3 tentativas seguidas do envio para DLQ:
+```
+[App1Client] Falha ao integrar evento id=...
+[App1Client] Falha ao integrar evento id=...
+[App1Client] Falha ao integrar evento id=...
+[DLQ] Enviando mensagem para DLQ=AplicacaoAgrotisTesteEvento.DLQ
+```
+
+5. Confirme a mensagem na DLQ:
+```bash
+docker exec -it agr-kafka-local /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic AplicacaoAgrotisTesteEvento.DLQ \
+  --from-beginning
+```
+
+---
+
+## 8. Parar o ambiente
 
 ```bash
 docker compose down
